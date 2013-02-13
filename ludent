@@ -1,18 +1,17 @@
 #!/usr/bin/env lua
 
-
-string.count = function(str, s2) 
-   local count = 0 
-   for i = 1, #str do
-      if str:sub(i,i) == s2 then
-	 count = count + 1 
-      end 
-   end 
-   return count
+string.count = function(str, s2)
+  local count = 0
+  for i = 1, #str do
+    if str:sub(i,i) == s2 then
+      count = count + 1
+    end
+  end
+  return count
 end
 
 string.trim = function(s)
-   return (s:gsub("^%s*(.-)%s*$", "%1"))
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
 local indent_str = '  '
@@ -20,93 +19,93 @@ local indent_str = '  '
 local level = 0
 
 local braces = {
-   {'{','}'},
-   {'(',')'},
+  {'{','}'},
+  {'(',')'},
 }
 
 local posts = {
-   ['.*function%(.*%)%s*$'] = 1,
-   ['.*%(.*function%(.*%).*end'] = -1,
-   ['function%(%s*$'] = 1,
-   ['.*then$'] = 1,
-   ['^repeat%s*$'] = 1,
-   ['.*do%s*$'] = 1,
-   ['^else%s*$'] = 1,
-   ['^end.*%)'] = -1,
-}
-
-local pres = {
-   ['^end,?$'] = -1,
-   ['^until.*'] = -1,
-   ['else$'] = -1,
-   ['elseif.*'] = -1,
+  ['.*function%(.*%)%s*$'] = 1,
+  ['.*%(.*function%(.*%).*end'] = -1,
+    ['function%(%s*$'] = 1,
+      ['.*then$'] = 1,
+      ['^repeat%s*$'] = 1,
+      ['.*do%s*$'] = 1,
+      ['^else%s*$'] = 1,
+    ['^end.*%)'] = -1,
+  }
+  
+  local pres = {
+    ['^end,?$'] = -1,
+    ['^until.*'] = -1,
+    ['else$'] = -1,
+  ['elseif.*'] = -1,
 }
 
 
 local indent = function(src,dst)
-   assert(src,dst)
-   for line in src:lines() do
-      line = line:trim() or ''
-      local line_without_comment,comment = line:match('(.*)(%-%-.*)') 
-      if comment then
-	 line = line_without_comment:trim()
-      else
-	 comment = ''
+  assert(src,dst)
+  for line in src:lines() do
+    line = line:trim() or ''
+    local line_without_comment,comment = line:match('(.*)(%-%-.*)')
+    if comment then
+      line = line_without_comment:trim()
+    else
+      comment = ''
+    end
+    
+    local pre = 0
+    local post = 0
+    
+    for _,b in pairs(braces) do
+      local dif = line:count(b[1]) - line:count(b[2])
+      if dif > 0 then
+        post = post + dif
+      elseif dif < 0 then
+        pre = pre + dif
       end
-      
-      local pre = 0
-      local post = 0
-
-      for _,b in pairs(braces) do
-	 local dif = line:count(b[1]) - line:count(b[2])
-	 if dif > 0 then
-	    post = post + dif
-	 elseif dif < 0 then
-	    pre = pre + dif
-	 end
+    end
+    
+    for exp,inc in pairs(posts) do
+      if line:match(exp) then
+        post = post + inc
       end
-      
-      for exp,inc in pairs(posts) do
-	 if line:match(exp) then
-	    post = post + inc
-	 end
+    end
+    
+    for exp,inc in pairs(pres) do
+      if line:match(exp) then
+        pre = pre + inc
       end
-      
-      for exp,inc in pairs(pres) do
-	 if line:match(exp) then
-	    pre = pre + inc
-	 end
-      end
-      
-      -- print('L',level,post,pre,dif)
-      
-      level = level + pre
-
-      dst:write(string.rep(indent_str,level)..line..comment..'\n')
-      
-      level = level + post
-      assert(level >=0,line..'('..level..')')
-   end
-   assert(level==0,level)
+    end
+    
+    -- print('L',level,post,pre,dif)
+    
+    level = level + pre
+    
+    dst:write(string.rep(indent_str,level)..line..comment..'\n')
+    
+    level = level + post
+    assert(level >=0,line..'('..level..')')
+  end
+  assert(level==0,level)
 end
 
 if #arg == 0 then
-   indent(io.stdin,io.stdout)
+  indent(io.stdin,io.stdout)
 else
-   local copy = function(src,dst)
-      local data = src:read('*a')
-      dst:write(data)
-      dst:flush()
-   end
-   for _,f in ipairs(arg) do
-      print('LUDENTING',f)
-      local src = io.open(f)
-      local tmp = io.tmpfile()
-      indent(src,tmp)
-      src:close()
-      src = io.open(f,'w')
-      tmp:flush()
-      tmp:seek('set')
-      copy(tmp,src)
-   end
+  local copy = function(src,dst)
+    local data = src:read('*a')
+    dst:write(data)
+    dst:flush()
+  end
+  for _,f in ipairs(arg) do
+    print('LUDENTING',f)
+    local src = io.open(f)
+    local tmp = io.tmpfile()
+    indent(src,tmp)
+    src:close()
+    src = io.open(f,'w')
+    tmp:flush()
+    tmp:seek('set')
+    copy(tmp,src)
+  end
 end
