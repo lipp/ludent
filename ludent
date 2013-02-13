@@ -36,10 +36,10 @@ local posts = {
 }
 
 local pres = {
-   ['%s*elseif.*then%s*$'] = -1,
    ['^end,?$'] = -1,
    ['^until.*'] = -1,
    ['else$'] = -1,
+   ['elseif.*'] = -1,
 }
 
 
@@ -49,9 +49,9 @@ local indent = function(src,dst)
       line = line:trim() or ''
       local line_without_comment,comment = line:match('(.*)(%-%-.*)') 
       if comment then
-	 line = line_without_comment
+	 line = line_without_comment:trim()
       else
-	 comment = comment or ''
+	 comment = ''
       end
       
       local pre = 0
