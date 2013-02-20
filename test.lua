@@ -6,6 +6,10 @@ end
 
 local q = function() end
 
+local ok,bla = pcall(
+function()
+		     end)
+
 on_message(function(blabla)
 	      local s = {
 		 1,
