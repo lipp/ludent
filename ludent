@@ -26,38 +26,38 @@ local braces = {
 local posts = {
   ['.*function%(.*%)%s*$'] = 1,
   ['.*%(.*function%(.*%).*end'] = -1,
-    ['function%(%s*$'] = 1,
-      ['.*then$'] = 1,
-      ['^repeat%s*$'] = 1,
-      ['.*do%s*$'] = 1,
-      ['^else%s*$'] = 1,
-    ['^end.*%)'] = -1,
-  }
-  
-  local pres = {
-    ['^end,?$'] = -1,
-    ['^until.*'] = -1,
-    ['else$'] = -1,
+  ['function%(%s*$'] = 1,
+  ['.*then$'] = 1,
+  ['^repeat%s*$'] = 1,
+  ['.*do%s*$'] = 1,
+  ['^else%s*$'] = 1,
+  ['^end.*%)'] = -1,
+}
+
+local pres = {
+  ['^end,?$'] = -1,
+  ['^until.*'] = -1,
+  ['else$'] = -1,
   ['elseif.*'] = -1,
 }
 
+local isolate = function(l)
+  local pure = l:gsub('"[^"]*"','""')
+  pure = pure:gsub("'[^']*'","''")
+  return pure:match('(.*)%-%-.*') or pure
+end
 
 local indent = function(src,dst)
   assert(src,dst)
   for line in src:lines() do
     line = line:trim() or ''
-    local line_without_comment,comment = line:match('(.*)(%-%-.*)')
-    if comment then
-      line = line_without_comment:trim()
-    else
-      comment = ''
-    end
+    local pure = isolate(line)
     
     local pre = 0
     local post = 0
     
     for _,b in pairs(braces) do
-      local dif = line:count(b[1]) - line:count(b[2])
+      local dif = pure:count(b[1]) - pure:count(b[2])
       if dif > 0 then
         post = post + dif
       elseif dif < 0 then
@@ -66,13 +66,13 @@ local indent = function(src,dst)
     end
     
     for exp,inc in pairs(posts) do
-      if line:match(exp) then
+      if pure:match(exp) then
         post = post + inc
       end
     end
     
     for exp,inc in pairs(pres) do
-      if line:match(exp) then
+      if pure:match(exp) then
         pre = pre + inc
       end
     end
@@ -81,7 +81,7 @@ local indent = function(src,dst)
     
     level = level + pre
     
-    dst:write(string.rep(indent_str,level)..line..comment..'\n')
+    dst:write(string.rep(indent_str,level)..line..'\n')
     
     level = level + post
     assert(level >=0,line..'('..level..')')
