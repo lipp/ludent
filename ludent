@@ -26,6 +26,7 @@ local braces = {
 local posts = {
   ['.*function%(.*%)%s*$'] = 1,
   ['.*%(.*function%(.*%).*end'] = -1,
+  ['.*%(.*function%(.*%).*end%),'] = 1,
   ['function%(%s*$'] = 1,
   ['.*then$'] = 1,
   ['^repeat%s*$'] = 1,
@@ -80,11 +81,12 @@ local indent = function(src,dst)
     -- print('L',level,post,pre,dif)
     
     level = level + pre
+    assert(level >=0,line..'(pre2/'..level..')')
     
     dst:write(string.rep(indent_str,level)..line..'\n')
     
     level = level + post
-    assert(level >=0,line..'('..level..')')
+    assert(level >=0,line..'(post/'..level..')')
   end
   assert(level==0,level)
 end
