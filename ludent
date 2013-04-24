@@ -24,9 +24,16 @@ local braces = {
 }
 
 local posts = {
-  ['.*function%(.*%)%s*$'] = 1,
-  ['.*%(.*function%(.*%).*end'] = -1,
-  ['.*%(.*function%(.*%).*end%),'] = 1,
+  ['^function%s*%(.*%)%s*$'] = 1, -- function ()
+  ['.*%(.*function%s*%(.*%).*end'] = -1, -- ... (function () end
+  ['.*%(.*function%s*%(.*%).*end%),'] = 1, -- ...(function () end)
+  ['%([%w_,%s]*function%s*%(.*%)%s*$'] = 1, -- ...guard(function () end)
+  ['^local%s+function%s*%([%w_,%s%.]*%)'] = 1,
+  ['^local%s+function%s+[%w_]*%s*%([%w_,%s%.]*%)%s*$'] = 1,
+  ['^local%s+[%w_]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*$'] = 1,
+  ['^[%w_%.]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*$'] = 1,
+  ['^[%w_%.]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*end$'] = 1,
+  ['^return%s+function%s*%([%w_,%s%.]*%)%s*$'] = 1,
   ['function%(%s*$'] = 1,
   ['.*then$'] = 1,
   ['^repeat%s*$'] = 1,
@@ -48,6 +55,11 @@ local isolate = function(l)
   return pure:match('(.*)%-%-.*') or pure
 end
 
+local debugp = function() end
+if os.getenv('LUDENTDEBUG') == '1' then
+  debugp = print
+end
+
 local indent = function(src,dst)
   assert(src,dst)
   for line in src:lines() do
@@ -57,8 +69,11 @@ local indent = function(src,dst)
     local pre = 0
     local post = 0
     
+    debugp('------',pure)
+    
     for _,b in pairs(braces) do
       local dif = pure:count(b[1]) - pure:count(b[2])
+      debugp('-- BRACE',dif,level)
       if dif > 0 then
         post = post + dif
       elseif dif < 0 then
@@ -66,27 +81,31 @@ local indent = function(src,dst)
       end
     end
     
-    for exp,inc in pairs(posts) do
-      if pure:match(exp) then
-        post = post + inc
-      end
-    end
-    
     for exp,inc in pairs(pres) do
       if pure:match(exp) then
+        debugp('-- PRE',inc,level,exp,pure)
         pre = pre + inc
       end
     end
     
+    for exp,inc in pairs(posts) do
+      if pure:match(exp) then
+        debugp('-- POST',inc,level,exp,pure)
+        post = post + inc
+      end
+    end
+    
+    debugp('------')
+    
     -- print('L',level,post,pre,dif)
     
     level = level + pre
-    assert(level >=0,line..'(pre2/'..level..')')
+    assert(level >=0,line..' (pre/'..level..')')
     
     dst:write(string.rep(indent_str,level)..line..'\n')
     
     level = level + post
-    assert(level >=0,line..'(post/'..level..')')
+    assert(level >=0,line..' (post/'..level..')')
   end
   assert(level==0,level)
 end
