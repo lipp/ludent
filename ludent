@@ -23,18 +23,29 @@ local braces = {
   {'(',')'},
 }
 
+local opens_function = function(line)
+  local funcs = 0
+  for exp in line:gfind('(.?)function') do
+    if #exp == 0 or exp:match('[,{}%)%(%s=]') then
+      funcs = funcs + 1
+    end
+  end
+  local ends = 0
+  for exp in line:gfind('(.?)end') do
+    if #exp == 0 or exp:match('[,{}%(%)%s]') then
+      ends = ends + 1
+    end
+  end
+  local dif = funcs - ends
+  if dif > 0 then
+    assert(dif==1)
+    return dif
+  else
+    return 0
+  end
+end
+
 local posts = {
-  ['^function%s*%(.*%)%s*$'] = 1, -- function ()
-  ['.*%(.*function%s*%(.*%).*end'] = -1, -- ... (function () end
-  ['.*%(.*function%s*%(.*%).*end%),'] = 1, -- ...(function () end)
-  ['%([%w_,%s]*function%s*%(.*%)%s*$'] = 1, -- ...guard(function () end)
-  ['^local%s+function%s*%([%w_,%s%.]*%)'] = 1,
-  ['^local%s+function%s+[%w_]*%s*%([%w_,%s%.]*%)%s*$'] = 1,
-  ['^local%s+[%w_]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*$'] = 1,
-  ['^[%w_%.]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*$'] = 1,
-  ['^[%w_%.]+%s*=%s*function%s*%([%w_,%s%.]*%)%s*end$'] = 1,
-  ['^return%s+function%s*%([%w_,%s%.]*%)%s*$'] = 1,
-  ['function%(%s*$'] = 1,
   ['.*then$'] = 1,
   ['^repeat%s*$'] = 1,
   ['.*do%s*$'] = 1,
@@ -49,6 +60,7 @@ local pres = {
   ['elseif.*'] = -1,
 }
 
+-- removes strings ('bla' -> '') and trailing comments
 local isolate = function(l)
   local pure = l:gsub('"[^"]*"','""')
   pure = pure:gsub("'[^']*'","''")
@@ -73,7 +85,9 @@ local indent = function(src,dst)
     
     for _,b in pairs(braces) do
       local dif = pure:count(b[1]) - pure:count(b[2])
-      debugp('-- BRACE',dif,level)
+      if dif ~= 0 then
+        debugp('-- BRACE',dif,level)
+      end
       if dif > 0 then
         post = post + dif
       elseif dif < 0 then
@@ -88,6 +102,12 @@ local indent = function(src,dst)
       end
     end
     
+    local openf = opens_function(pure)
+    if openf ~= 0 then
+      debugp('-- FUNCTION',openf,level)
+    end
+    post = post + openf
+    
     for exp,inc in pairs(posts) do
       if pure:match(exp) then
         debugp('-- POST',inc,level,exp,pure)
@@ -95,7 +115,7 @@ local indent = function(src,dst)
       end
     end
     
-    debugp('------')
+    --    debugp('------')
     
     -- print('L',level,post,pre,dif)
     
