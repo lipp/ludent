@@ -31,7 +31,7 @@ local opens_function = function(line)
     end
   end
   local ends = 0
-  for exp in line:gfind('(.?)end') do
+  for exp in line:gfind('function%s*(.*)%s*end') do
     if #exp == 0 or exp:match('[,{}%(%)%s]') then
       ends = ends + 1
     end
