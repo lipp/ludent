@@ -121,8 +121,11 @@ local indent = function(src,dst)
     
     level = level + pre
     assert(level >=0,line..' (pre/'..level..')')
-    
-    dst:write(string.rep(indent_str,level)..line..'\n')
+
+    if string.len(line) > 0 then
+      dst:write(string.rep(indent_str,level)..line)
+    end
+    dst:write('\n')
     
     level = level + post
     assert(level >=0,line..' (post/'..level..')')
