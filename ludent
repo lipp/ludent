@@ -25,13 +25,13 @@ local braces = {
 
 local opens_function = function(line)
   local funcs = 0
-  for exp in line:gfind('(.?)function') do
+  for exp in line:gmatch('(.?)function') do
     if #exp == 0 or exp:match('[,{}%)%(%s=]') then
       funcs = funcs + 1
     end
   end
   local ends = 0
-  for exp in line:gfind('function%s*(.*)%s*end') do
+  for exp in line:gmatch('function%s*(.*)%s*end') do
     if #exp == 0 or exp:match('[,{}%(%)%s]') then
       ends = ends + 1
     end
