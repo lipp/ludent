@@ -87,12 +87,12 @@ local indent = function(src,dst)
   for line in src:lines() do
     line = line:trim() or ''
     local pure = isolate(line)
-    
+
     local pre = 0
     local post = 0
-    
+
     debugp('------',pure)
-    
+
     for _,b in pairs(braces) do
       local dif = pure:count(b[1]) - pure:count(b[2])
       if dif ~= 0 then
@@ -104,31 +104,31 @@ local indent = function(src,dst)
         pre = pre + dif
       end
     end
-    
+
     for exp,inc in pairs(pres) do
       if pure:match(exp) then
         debugp('-- PRE',inc,level,exp,pure)
         pre = pre + inc
       end
     end
-    
+
     local openf = opens_function(pure)
     if openf ~= 0 then
       debugp('-- FUNCTION',openf,level)
     end
     post = post + openf
-    
+
     for exp,inc in pairs(posts) do
       if pure:match(exp) then
         debugp('-- POST',inc,level,exp,pure)
         post = post + inc
       end
     end
-    
+
     --    debugp('------')
-    
+
     -- print('L',level,post,pre,dif)
-    
+
     level = level + pre
     assert(level >=0,line..' (pre/'..level..')')
 
@@ -136,7 +136,7 @@ local indent = function(src,dst)
       dst:write(string.rep(indent_str,level)..line)
     end
     dst:write('\n')
-    
+
     level = level + post
     assert(level >=0,line..' (post/'..level..')')
   end
