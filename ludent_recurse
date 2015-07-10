@@ -1,0 +1,12 @@
+#/bin/sh
+
+function usage {
+    echo "usage: $0 DIR"
+    exit 1
+}
+
+if [ $# -ne 1 ]; then
+  usage
+fi
+
+find $1 -name '*.lua' | xargs ludent
