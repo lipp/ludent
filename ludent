@@ -60,11 +60,21 @@ local pres = {
   ['elseif.*'] = -1,
 }
 
+local function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
 -- removes strings ('bla' -> '') and trailing comments
 local isolate = function(l)
   local pure = l:gsub('"[^"]*"','""')
   pure = pure:gsub("'[^']*'","''")
-  return pure:match('(.*)%-%-.*') or pure
+
+  local cmts = pure:match('(.*)%-%-.*');
+  if (cmts) then
+    pure = cmts
+  end
+
+  return trim(pure)
 end
 
 local debugp = function() end
