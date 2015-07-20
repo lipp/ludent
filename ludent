@@ -24,14 +24,15 @@ local braces = {
 }
 
 local opens_function = function(line)
+  local lline = line.." "
   local funcs = 0
-  for exp in line:gmatch('(.?)function') do
+  for exp in lline:gmatch('(.?)function%A') do
     if #exp == 0 or exp:match('[,{}%)%(%s=]') then
       funcs = funcs + 1
     end
   end
   local ends = 0
-  for exp in line:gmatch('function%s*(.*)%s*end') do
+  for exp in lline:gmatch('function%s*(.*)%s*end%A') do
     if #exp == 0 or exp:match('[,{}%(%)%s]') then
       ends = ends + 1
     end
@@ -50,7 +51,7 @@ local posts = {
   ['^repeat%s*$'] = 1,
   ['.*do%s*$'] = 1,
   ['^else%s*$'] = 1,
-  ['^end.*%)'] = -1,
+  ['^end%f[%A].*%)'] = -1,
 }
 
 local pres = {
