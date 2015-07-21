@@ -85,9 +85,18 @@ end
 
 local indent = function(src,dst)
   assert(src,dst)
+  local isCommentBlock = false
   for line in src:lines() do
     line = line:trim() or ''
     local pure = isolate(line)
+
+    if line:match("%-%-%[%[") then
+      isCommentBlock = true
+    end
+    if line:match("%]%]%-%-") or line:match("%]%]")  then
+      isCommentBlock = false
+    end
+
 
     local pre = 0
     local post = 0
@@ -130,18 +139,29 @@ local indent = function(src,dst)
 
     -- print('L',level,post,pre,dif)
 
-    level = level + pre
-    assert(level >=0,line..' (pre/'..level..')')
+    if not isCommentBlock then
 
-    if string.len(line) > 0 then
-      dst:write(string.rep(indent_str,level)..line)
+      level = level + pre
+      assert(level >=0,line..' (pre/'..level..')')
+
+      if string.len(line) > 0 then
+        dst:write(string.rep(indent_str,level)..line)
+        print(string.rep(indent_str,level)..line)
+      end
+      dst:write('\n')
+
+      level = level + post
+      assert(level >=0,line..' (post/'..level..')')
+    else
+      debugp("Skipping comment block.")
+      if string.len(line) > 0 then
+        dst:write(string.rep(indent_str,level)..line)
+        print(string.rep(indent_str,level)..line)
+      end
+      dst:write('\n')
     end
-    dst:write('\n')
-
-    level = level + post
-    assert(level >=0,line..' (post/'..level..')')
   end
-  assert(level==0,level)
+  assert(level==0,"Last line is on "..level.." level.")
 end
 
 if #arg == 0 then
