@@ -150,7 +150,9 @@ local indent = function(src,dst)
       end
       dst:write('\n')
 
-      level = level + post
+      if (line:sub(1, 2) ~= "--") then
+        level = level + post
+      end
       assert(level >=0,line..' (post/'..level..')')
     else
       debugp("Skipping comment block.")
