@@ -24,14 +24,15 @@ local braces = {
 }
 
 local opens_function = function(line)
+  local lline = line.." "
   local funcs = 0
-  for exp in line:gmatch('(.?)function') do
+  for exp in lline:gmatch('(.?)function%A') do
     if #exp == 0 or exp:match('[,{}%)%(%s=]') then
       funcs = funcs + 1
     end
   end
   local ends = 0
-  for exp in line:gmatch('function%s*(.*)%s*end') do
+  for exp in lline:gmatch('function%s*(.*)%s*end%A') do
     if #exp == 0 or exp:match('[,{}%(%)%s]') then
       ends = ends + 1
     end
@@ -50,7 +51,7 @@ local posts = {
   ['^repeat%s*$'] = 1,
   ['.*do%s*$'] = 1,
   ['^else%s*$'] = 1,
-  ['^end.*%)'] = -1,
+  ['^end%f[%A].*%)'] = -1,
 }
 
 local pres = {
@@ -60,11 +61,21 @@ local pres = {
   ['elseif.*'] = -1,
 }
 
+local function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
 -- removes strings ('bla' -> '') and trailing comments
 local isolate = function(l)
   local pure = l:gsub('"[^"]*"','""')
   pure = pure:gsub("'[^']*'","''")
-  return pure:match('(.*)%-%-.*') or pure
+
+  local cmts = pure:match('(.*)%-%-.*');
+  if (cmts) then
+    pure = cmts
+  end
+
+  return trim(pure)
 end
 
 local debugp = function() end
@@ -74,15 +85,24 @@ end
 
 local indent = function(src,dst)
   assert(src,dst)
+  local isCommentBlock = false
   for line in src:lines() do
     line = line:trim() or ''
     local pure = isolate(line)
-    
+
+    if line:match("%-%-%[%[") then
+      isCommentBlock = true
+    end
+    if line:match("%]%]%-%-") or line:match("%]%]")  then
+      isCommentBlock = false
+    end
+
+
     local pre = 0
     local post = 0
-    
+
     debugp('------',pure)
-    
+
     for _,b in pairs(braces) do
       local dif = pure:count(b[1]) - pure:count(b[2])
       if dif ~= 0 then
@@ -94,43 +114,56 @@ local indent = function(src,dst)
         pre = pre + dif
       end
     end
-    
+
     for exp,inc in pairs(pres) do
       if pure:match(exp) then
         debugp('-- PRE',inc,level,exp,pure)
         pre = pre + inc
       end
     end
-    
+
     local openf = opens_function(pure)
     if openf ~= 0 then
       debugp('-- FUNCTION',openf,level)
     end
     post = post + openf
-    
+
     for exp,inc in pairs(posts) do
       if pure:match(exp) then
         debugp('-- POST',inc,level,exp,pure)
         post = post + inc
       end
     end
-    
-    --    debugp('------')
-    
-    -- print('L',level,post,pre,dif)
-    
-    level = level + pre
-    assert(level >=0,line..' (pre/'..level..')')
 
-    if string.len(line) > 0 then
-      dst:write(string.rep(indent_str,level)..line)
+    --    debugp('------')
+
+    -- print('L',level,post,pre,dif)
+
+    if not isCommentBlock then
+
+      level = level + pre
+      assert(level >=0,line..' (pre/'..level..')')
+
+      if string.len(line) > 0 then
+        dst:write(string.rep(indent_str,level)..line)
+        print(string.rep(indent_str,level)..line)
+      end
+      dst:write('\n')
+
+      if (line:sub(1, 2) ~= "--") then
+        level = level + post
+      end
+      assert(level >=0,line..' (post/'..level..')')
+    else
+      debugp("Skipping comment block.")
+      if string.len(line) > 0 then
+        dst:write(string.rep(indent_str,level)..line)
+        print(string.rep(indent_str,level)..line)
+      end
+      dst:write('\n')
     end
-    dst:write('\n')
-    
-    level = level + post
-    assert(level >=0,line..' (post/'..level..')')
   end
-  assert(level==0,level)
+  assert(level==0,"Last line is on "..level.." level.")
 end
 
 if #arg == 0 then
